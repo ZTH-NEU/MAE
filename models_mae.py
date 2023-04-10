@@ -17,6 +17,7 @@ import torch.nn as nn
 from timm.models.vision_transformer import PatchEmbed, Block
 
 from util.pos_embed import get_2d_sincos_pos_embed
+import matplotlib.pyplot as plt
 
 
 class MaskedAutoencoderViT(nn.Module):
@@ -213,10 +214,61 @@ class MaskedAutoencoderViT(nn.Module):
         loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
         return loss
 
+    def tensor_to_image(self,tenso):
+        if tenso.dim() == 4:
+            tenso = tenso.squeeze(0)  ###去掉batch维度
+        tenso = tenso.transpose(0,2)  ##将c,h,w 转换为h,w,
+        tenso = tenso.mul(255).clamp(0, 255)  ###将像素值转换为0-255之间
+        tenso = tenso.cpu().detach().numpy().astype('uint8')  ###
+        return tenso
+
+
+    def show_onebeach(self, im_q, im_k, pred_q, pred_k):
+
+        for i in range(0, len(im_q)):
+            # im_q = self.tensor_to_image(im_q[i])
+            # im_k = self.tensor_to_image(im_k[i])
+
+            fig = plt.figure()
+            ax1 = fig.add_subplot(221)
+            ax2 = fig.add_subplot(222)
+            ax3 = fig.add_subplot(223)
+            ax4 = fig.add_subplot(224)
+
+
+            q_temp = im_q[i].mul(255).clamp(0, 255)
+            q_temp = q_temp.transpose(0, 2)
+            q_temp = q_temp.cpu().detach().numpy().astype('uint8')
+            ax1.imshow(q_temp)
+
+            # pred_1 = self.encoder_q.unpatchify(pred_q)
+            # pred_1 = pred_1[i].cpu()
+            # pred_1 = pred_1.transpose(0, 2)
+            # ax2.imshow(pred_1)
+
+            k_temp = im_k[i].mul(255).clamp(0, 255)
+            k_temp = k_temp.transpose(0, 2)
+            k_temp = k_temp.cpu().detach().numpy().astype('uint8')
+            ax3.imshow(k_temp)
+
+            # pred_2 = self.encoder_q.unpatchify(pred_k)
+            # pred_2 = pred_2[i].cpu()
+            # pred_2 = pred_2.transpose(0, 2)
+            # ax4.imshow(pred_2)
+
+            plt.show()
+
+            if i >= 2:
+                break
+
+            # fig.savefig('./picture3/{}.jpg'.format(i))
+
     def forward(self, imgs, mask_ratio=0.75):
         latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
         pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
         loss = self.forward_loss(imgs, pred, mask)
+        imgs_pred = self.unpatchify(pred)
+        self.show_onebeach(imgs,imgs_pred,imgs,imgs_pred)
         return loss, pred, mask
 
 
