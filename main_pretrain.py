@@ -101,6 +101,10 @@ def get_args_parser():
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
 
+    parser.add_argument('--chkpt_dir', default='./mae_visualize_vit_large.pth')
+
+
+
     return parser
 
 
@@ -157,9 +161,12 @@ def main(args):
     model = models_mae.__dict__[args.model](norm_pix_loss=args.norm_pix_loss)
 
     model.to(device)
+    checkpoint = torch.load(args.chkpt_dir, map_location='cpu')
+    msg = model.load_state_dict(checkpoint['model'], strict=False)
+    print(msg)
 
     model_without_ddp = model
-    print("Model = %s" % str(model_without_ddp))
+    # print("Model = %s" % str(model_without_ddp))
 
     eff_batch_size = args.batch_size * args.accum_iter * misc.get_world_size()
     
